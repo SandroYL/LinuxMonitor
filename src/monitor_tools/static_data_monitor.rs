@@ -9,6 +9,7 @@ fn get_device_name() -> String {
 }
 
 /// 保存在/proc/sys/kernel/ostype和/proc/sys/kernel/osrelease内
+/// 
 /// 预期格式为Linux-5.4.0-144-generic
 fn get_sys_core_type() -> String {
     let file = File::open("/proc/sys/kernel/ostype");
