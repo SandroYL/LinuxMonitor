@@ -1,9 +1,9 @@
 use core::panic;
-use std::{fs::File, io::{BufReader, BufRead}};
+use std::{fs::{File, self}, io::{BufReader, BufRead}, mem::replace};
 
 use chrono::{Local, Datelike, Timelike};
 
-use super::structs::{CPUTimes, MemoryInfo};
+use super::structs::{CPUTimes, MemoryInfo, ACPIInfo, DeviceTempratures};
 
 
 /// 返回系统时间
@@ -25,6 +25,8 @@ fn get_current_time_parse() -> String {
 }
 
 /// 保存在/proc/uptime 文件中
+/// 
+/// 系统运行时间
 /// 
 /// 返回格式为(second)
 /// 
@@ -156,4 +158,84 @@ fn sys_mem_info() -> MemoryInfo {
         cached, 
         swap_cached,
     )
+}
+
+/// acpi模块部分重要信息，
+/// 以vec形式返回
+/// 
+/// 详情可见 Instrucment
+fn acpi_info() -> Vec<ACPIInfo> {
+    let file = match File::open("/proc/acpi/wakeup") {
+        Ok(fp) => fp,
+        Err(_) => {
+            panic!("ERROR_ACPI");
+        }  
+    };
+    let mut lines = BufReader::new(file).lines();
+    let mut acpi_info_vec: Vec<ACPIInfo> = Vec::new();
+    lines.next();
+    for line in lines {
+        let line = line.unwrap();
+        let line = line.split_ascii_whitespace();
+        let (mut device, mut s_state, mut status): (String, String, String) = (Default::default(), Default::default(), Default::default());
+        let mut count = 0;
+        for info in line {
+            match count {
+                0 => {
+                    count += 1;
+                    device = info.to_string();
+                },
+                1 => {
+                    count += 1;
+                    s_state = info.to_string();
+                }
+                2 => {
+                    count = 3;
+                    status = info.to_string();
+                }
+                _ => {}
+            }
+        }
+        acpi_info_vec.push(ACPIInfo::new (
+            device,
+            s_state,
+            status,
+        ));
+    }
+    acpi_info_vec
+} 
+
+/// 可以挖掘的温度检测模块
+/// 
+/// 以vec中device_name,temp形式返回
+fn temperature_info() -> Vec<DeviceTempratures> {
+    let mut temperatures: Vec<DeviceTempratures> = Vec::new();
+
+    //for core
+    for i in 1..=64 {
+        let device = format!("core{}", i);
+        let file_path = format!("/sys/class/hwmon/hwmon0/temp{}_input", i);
+        let data = match fs::read_to_string(file_path) {
+            Ok(infos) => infos,
+            Err(_) => break,
+        };
+        temperatures.push(DeviceTempratures::new(
+            device,
+            data.trim_end().parse::<i64>().unwrap()
+        ));
+    }
+    // for fans
+    for i in 1..=32 {
+        let device = format!("fans{}", i);
+        let file_path = format!("/sys/class/hwmon/hwmon1/fan{}_input", i);
+        let data = match fs::read_to_string(file_path) {
+            Ok(infos) => infos,
+            Err(_) => break,
+        };
+        temperatures.push(DeviceTempratures::new(
+            device,
+            data.trim_end().parse::<i64>().unwrap()
+        ));
+    }
+    temperatures
 }

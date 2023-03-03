@@ -1,9 +1,8 @@
 // 定义所有要用到的结构
 
 
-#[derive(Debug)]
-pub(crate) struct CPUTimes {
-    name            : String,
+pub struct CPUTimes {
+    device          : String,
     user            : u128,
     guest_user      : u128,
     system          : u128,
@@ -13,25 +12,21 @@ pub(crate) struct CPUTimes {
     softirq         : u128,
 }
 
-impl CPUTimes{
-    pub fn new(name: String, user: u128, guest_user: u128, system: u128, idle: u128, iowait: u128, irq: u128, softirq: u128) -> CPUTimes {
-        CPUTimes { 
-            name, 
-            user, 
-            guest_user, 
-            system, 
-            idle, 
-            iowait, 
-            irq, 
-            softirq, 
-        }
-    }   
+#[derive(Debug)]
+pub struct CPUInfos {
+    processor       : usize,
+    vendor_id       : String,
+    cpu_family      : usize,
+    model           : usize,
+    model_name      : String,
+    stepping        : usize,
+    microcode       : u128,
+    cpu_mhz         : f32,
+    cache_size_kb   : u128,
 }
-
 /// 保存在 /proc/meminfo中
 /// 
 /// 只选取了部分信息, 单位为 kB
-#[derive(Debug)]
 pub struct MemoryInfo {
     mem_total       : u128,
     mem_free        : u128,
@@ -39,6 +34,21 @@ pub struct MemoryInfo {
     buffers         : u128,
     cached          : u128,
     swap_cached     : u128,
+}
+
+/// 详情见instrucment.md内说明
+pub struct ACPIInfo {
+    device          : String,
+    s_state         : String,
+    status          : String,
+}
+
+/// 对设备温度监控
+/// 
+/// 结果保存在Vec中，0-16为核心温度，17-19为风扇温度
+pub struct DeviceTempratures {
+    device          : String,
+    temperature     : i64,
 }
 
 impl MemoryInfo {
@@ -50,6 +60,57 @@ impl MemoryInfo {
             buffers, 
             cached, 
             swap_cached,
+        }
+    }
+}
+
+impl CPUTimes{
+    pub fn new(device: String, user: u128, guest_user: u128, system: u128, idle: u128, iowait: u128, irq: u128, softirq: u128) -> CPUTimes {
+        CPUTimes { 
+            device, 
+            user, 
+            guest_user, 
+            system, 
+            idle, 
+            iowait, 
+            irq, 
+            softirq, 
+        }
+    }   
+}
+
+impl ACPIInfo {
+    pub fn new (device: String, s_state: String, status: String) -> ACPIInfo {
+        ACPIInfo { 
+            device, 
+            s_state, 
+            status, 
+        }
+    }
+}
+
+impl DeviceTempratures {
+    pub fn new (device: String, temperature: i64) -> DeviceTempratures {
+        DeviceTempratures { 
+            device, 
+            temperature,
+        }
+    }
+}
+
+impl CPUInfos {
+    pub fn new (processor: usize, vendor_id: String, cpu_family: usize, model: usize,
+    model_name: String, stepping: usize, microcode: u128, cpu_mhz: f32, cache_size_kb: u128) -> CPUInfos {
+        CPUInfos { 
+            processor, 
+            vendor_id,
+            cpu_family, 
+            model,
+            model_name,
+            stepping,
+            microcode,
+            cpu_mhz,
+            cache_size_kb, 
         }
     }
 }
