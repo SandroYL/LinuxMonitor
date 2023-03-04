@@ -1,6 +1,5 @@
 // 定义所有要用到的结构
 
-
 pub struct CPUTimes {
     device          : String,
     user            : u128,
@@ -11,8 +10,6 @@ pub struct CPUTimes {
     irq             : u128,
     softirq         : u128,
 }
-
-#[derive(Debug)]
 pub struct CPUInfos {
     processor       : usize,
     vendor_id       : String,
@@ -35,7 +32,6 @@ pub struct MemoryInfo {
     cached          : u128,
     swap_cached     : u128,
 }
-
 /// 详情见instrucment.md内说明
 pub struct ACPIInfo {
     device          : String,
@@ -46,9 +42,30 @@ pub struct ACPIInfo {
 /// 对设备温度监控
 /// 
 /// 结果保存在Vec中，0-16为核心温度，17-19为风扇温度
-pub struct DeviceTempratures {
+pub struct DeviceTemperature {
     device          : String,
     temperature     : i64,
+}
+
+pub struct DeviceVoltage {
+    device          : String,
+    voltage         : i64,
+}
+
+pub struct NetInfo {
+    interface_name: String,
+    d_receive: f64,
+    d_transmit: f64,
+}
+
+impl NetInfo {
+    pub fn new(interface_name: String, d_receive: f64, d_transmit: f64) -> NetInfo {
+        NetInfo { 
+            interface_name, 
+            d_receive, 
+            d_transmit, 
+        }
+    }
 }
 
 impl MemoryInfo {
@@ -89,11 +106,20 @@ impl ACPIInfo {
     }
 }
 
-impl DeviceTempratures {
-    pub fn new (device: String, temperature: i64) -> DeviceTempratures {
-        DeviceTempratures { 
+impl DeviceTemperature {
+    pub fn new (device: String, temperature: i64) -> DeviceTemperature {
+        DeviceTemperature { 
             device, 
             temperature,
+        }
+    }
+}
+
+impl DeviceVoltage {
+    pub fn new (device: String, voltage: i64) -> DeviceVoltage {
+        DeviceVoltage { 
+            device, 
+            voltage,
         }
     }
 }

@@ -1,7 +1,5 @@
 use std::{fs::File, io::{BufReader, BufRead}};
-
 use super::structs::CPUInfos;
-
 
 fn get_device_name() -> String {
     let file = File::open("/proc/sys/kernel/hostname");

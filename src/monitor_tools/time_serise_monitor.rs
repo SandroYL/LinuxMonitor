@@ -1,14 +1,12 @@
 use core::panic;
-use std::{fs::{File, self}, io::{BufReader, BufRead}, mem::replace};
+use std::{fs::{File, self}, io::{BufReader, BufRead}, thread::sleep, time::Duration, collections::HashMap};
 
 use chrono::{Local, Datelike, Timelike};
+use sysinfo::{System, SystemExt, CpuExt, NetworkExt};
 
-use super::structs::{CPUTimes, MemoryInfo, ACPIInfo, DeviceTempratures};
+use super::structs::{CPUTimes, MemoryInfo, ACPIInfo, DeviceTemperature, DeviceVoltage, NetInfo};
 
 
-/// 返回系统时间
-/// 
-/// 以(y-m-d-h-m-s)的形式
 fn get_current_time_parse() -> String {
     let cur_time = Local::now();
 
@@ -24,13 +22,6 @@ fn get_current_time_parse() -> String {
     ymd_hms
 }
 
-/// 保存在/proc/uptime 文件中
-/// 
-/// 系统运行时间
-/// 
-/// 返回格式为(second)
-/// 
-/// 若未得到则返回NOTFOUND
 fn get_uptime_parse() -> String {
     let file = match File::open("/proc/uptime") {
         Ok(fp) => fp,
@@ -51,9 +42,6 @@ fn get_uptime_parse() -> String {
     ret
 }
 
-/// cpu 部分时间检测
-/// 
-/// 详情可见 Instrucment 内的部分说明
 fn cpu_time_info() -> Vec<CPUTimes> {
     let file = match File::open("/proc/stat") {
         Ok(fp) => fp,
@@ -160,10 +148,6 @@ fn sys_mem_info() -> MemoryInfo {
     )
 }
 
-/// acpi模块部分重要信息，
-/// 以vec形式返回
-/// 
-/// 详情可见 Instrucment
 fn acpi_info() -> Vec<ACPIInfo> {
     let file = match File::open("/proc/acpi/wakeup") {
         Ok(fp) => fp,
@@ -207,9 +191,9 @@ fn acpi_info() -> Vec<ACPIInfo> {
 
 /// 可以挖掘的温度检测模块
 /// 
-/// 以vec中device_name,temp形式返回
-fn temperature_info() -> Vec<DeviceTempratures> {
-    let mut temperatures: Vec<DeviceTempratures> = Vec::new();
+/// 以vec中device_name,volt形式返回
+fn temperature_info() -> Vec<DeviceTemperature> {
+    let mut temperatures: Vec<DeviceTemperature> = Vec::new();
 
     //for core
     for i in 1..=64 {
@@ -219,11 +203,17 @@ fn temperature_info() -> Vec<DeviceTempratures> {
             Ok(infos) => infos,
             Err(_) => break,
         };
-        temperatures.push(DeviceTempratures::new(
+        temperatures.push(DeviceTemperature::new(
             device,
             data.trim_end().parse::<i64>().unwrap()
         ));
     }
+    temperatures
+}
+
+/// 可以挖掘的电压检测模块
+fn voltage_info() -> Vec<DeviceVoltage> {
+    let mut voltages: Vec<DeviceVoltage> = Vec::new();
     // for fans
     for i in 1..=32 {
         let device = format!("fans{}", i);
@@ -232,10 +222,44 @@ fn temperature_info() -> Vec<DeviceTempratures> {
             Ok(infos) => infos,
             Err(_) => break,
         };
-        temperatures.push(DeviceTempratures::new(
+        voltages.push(DeviceVoltage::new(
             device,
             data.trim_end().parse::<i64>().unwrap()
         ));
     }
-    temperatures
+    voltages
+}
+
+/// cpu使用率
+fn cpu_usage_info(mut system: System) -> Vec<f32>  {
+    system.refresh_cpu();
+    let mut ret:Vec<f32> = Vec::new();
+    for cpu in system.cpus() {
+        ret.push(cpu.cpu_usage());
+    }
+    ret
+}
+
+/// 网络流量
+fn net() -> Vec<NetInfo> {
+    let mut system = System::new_all();
+    system.refresh_networks_list();
+    let mut name_rxptx: HashMap<String,(u64,u64)> = HashMap::new();
+    for (interface_name, data) in system.networks() {
+        name_rxptx.entry(interface_name.to_string()).or_insert((data.received(), data.transmitted()));
+    }
+
+    sleep(Duration::from_secs(1));
+    system.refresh_networks_list();
+    for (interface_name, data) in system.networks() {
+        name_rxptx.entry(interface_name.to_string()).and_modify(|rx_tx| {
+            rx_tx.0 = data.received() - rx_tx.0;
+            rx_tx.1 = data.transmitted() - rx_tx.1;
+        });
+    }
+    let mut NetInfos: Vec<NetInfo> = Vec::new();
+    for (interface_name, (rx, tx)) in name_rxptx.into_iter() {
+        NetInfos.push(NetInfo::new(interface_name, rx as f64 / 1024.0, tx as f64 / 1024.0));
+    }
+    NetInfos
 }
