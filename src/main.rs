@@ -1,10 +1,12 @@
-use std::{fs::File, io::{BufReader, BufRead}};
+use crate::TimeCollector::Collectors;
+
+pub mod TimeCollector;
 
 pub fn main() {
-    let file = File::open("/proc/sys/kernel/hostname");
-    let reader = BufReader::new(file.unwrap());
-    for line in reader.lines() {
-        println!("{}", line.unwrap());
+    let collector:Collectors = Collectors::new();
+    match collector.get_static_data() {
+        Ok(_) => {println!("OK");}
+        Err(err) => {println!("{:?}", err);}
     }
     println!("Hello World!");
 }

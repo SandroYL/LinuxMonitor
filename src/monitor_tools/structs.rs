@@ -1,5 +1,6 @@
 // 定义所有要用到的结构
 
+#[derive(Debug)]
 pub struct CPUTimes {
     device          : String,
     user            : u128,
@@ -10,6 +11,8 @@ pub struct CPUTimes {
     irq             : u128,
     softirq         : u128,
 }
+
+#[derive(Debug)]
 pub struct CPUInfos {
     processor       : usize,
     vendor_id       : String,
