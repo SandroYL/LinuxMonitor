@@ -1,4 +1,5 @@
-123dell-Precision-7920-TowerLinux-5.4.0-144-generic
+dell-Precision-7920-Tower
+Linux-5.4.0-144-generic
 CPUInfos { processor: 0, vendor_id: "GenuineIntel", cpu_family: 0, model: 85, model_name: "Intel(R) Xeon(R) Gold 6226R CPU @ 2.90GHz", stepping: 7, microcode: 83899139, cpu_mhz: 0.0, cache_size_kb: 22528 }
 CPUInfos { processor: 1, vendor_id: "GenuineIntel", cpu_family: 0, model: 85, model_name: "Intel(R) Xeon(R) Gold 6226R CPU @ 2.90GHz", stepping: 7, microcode: 83899139, cpu_mhz: 0.0, cache_size_kb: 22528 }
 CPUInfos { processor: 2, vendor_id: "GenuineIntel", cpu_family: 0, model: 85, model_name: "Intel(R) Xeon(R) Gold 6226R CPU @ 2.90GHz", stepping: 7, microcode: 83899139, cpu_mhz: 0.0, cache_size_kb: 22528 }

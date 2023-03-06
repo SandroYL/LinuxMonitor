@@ -15,7 +15,7 @@ impl TimeSeriesMonitor {
         TimeSeriesMonitor {  }
     }
 
-    fn get_current_time_parse() -> String {
+    pub fn get_current_time_parse(&self) -> String {
         let cur_time = Local::now();
     
         let mut ymd_hms:String = Default::default();
@@ -30,7 +30,7 @@ impl TimeSeriesMonitor {
         ymd_hms
     }
     
-    fn get_uptime_parse() -> String {
+    pub fn get_uptime_parse(&self) -> String {
         let file = match File::open("/proc/uptime") {
             Ok(fp) => fp,
             Err(_) => {
@@ -50,7 +50,7 @@ impl TimeSeriesMonitor {
         ret
     }
     
-    fn cpu_time_info() -> Vec<CPUTimes> {
+    pub fn cpu_time_info(&self) -> Vec<CPUTimes> {
         let file = match File::open("/proc/stat") {
             Ok(fp) => fp,
             Err(_) => {
@@ -87,7 +87,7 @@ impl TimeSeriesMonitor {
     /// 内存模块部分重要信息
     /// 
     /// 详细请见 Instrucment 内的部分说明
-    fn sys_mem_info() -> MemoryInfo {
+    pub fn sys_mem_info(&self) -> MemoryInfo {
         let file = match File::open("/proc/meminfo") {
             Ok(fp) => fp,
             Err(_) => {
@@ -156,7 +156,7 @@ impl TimeSeriesMonitor {
         )
     }
     
-    fn acpi_info() -> Vec<ACPIInfo> {
+    pub fn acpi_info(&self) -> Vec<ACPIInfo> {
         let file = match File::open("/proc/acpi/wakeup") {
             Ok(fp) => fp,
             Err(_) => {
@@ -200,7 +200,7 @@ impl TimeSeriesMonitor {
     /// 可以挖掘的温度检测模块
     /// 
     /// 以vec中device_name,volt形式返回
-    fn temperature_info() -> Vec<DeviceTemperature> {
+    pub fn temperature_info(&self) -> Vec<DeviceTemperature> {
         let mut temperatures: Vec<DeviceTemperature> = Vec::new();
     
         //for core
@@ -220,7 +220,7 @@ impl TimeSeriesMonitor {
     }
     
     /// 可以挖掘的电压检测模块
-    fn voltage_info() -> Vec<DeviceVoltage> {
+    pub fn voltage_info(&self) -> Vec<DeviceVoltage> {
         let mut voltages: Vec<DeviceVoltage> = Vec::new();
         // for fans
         for i in 1..=32 {
@@ -239,7 +239,7 @@ impl TimeSeriesMonitor {
     }
     
     /// cpu使用率
-    fn cpu_usage_info(system:&mut System) -> Vec<f32>  {
+    pub fn cpu_usage_info(&self, system:&mut System) -> Vec<f32>  {
         system.refresh_cpu();
         let mut ret:Vec<f32> = Vec::new();
         for cpu in system.cpus() {
@@ -249,7 +249,7 @@ impl TimeSeriesMonitor {
     }
     
     /// 网络流量
-    fn net_info(system:&mut System) -> Vec<NetInfo> {
+    pub fn net_info(&self, system:&mut System) -> Vec<NetInfo> {
         system.refresh_networks_list();
         let mut name_rxptx: HashMap<String,(u64,u64)> = HashMap::new();
         for (interface_name, data) in system.networks() {
@@ -257,18 +257,17 @@ impl TimeSeriesMonitor {
         }
     
         sleep(Duration::from_secs(1));
-        system.refresh_networks_list();
         for (interface_name, data) in system.networks() {
             name_rxptx.entry(interface_name.to_string()).and_modify(|rx_tx| {
                 rx_tx.0 = data.received() - rx_tx.0;
                 rx_tx.1 = data.transmitted() - rx_tx.1;
             });
         }
-        let mut NetInfos: Vec<NetInfo> = Vec::new();
+        let mut net_infos: Vec<NetInfo> = Vec::new();
         for (interface_name, (rx, tx)) in name_rxptx.into_iter() {
-            NetInfos.push(NetInfo::new(interface_name, rx as f64 / 1024.0, tx as f64 / 1024.0));
+            net_infos.push(NetInfo::new(interface_name, rx as f64 / 1024.0, tx as f64 / 1024.0));
         }
-        NetInfos
+        net_infos
     }
 }
 
