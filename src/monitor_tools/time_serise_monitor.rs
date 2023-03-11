@@ -250,18 +250,11 @@ impl TimeSeriesMonitor {
     
     /// 网络流量
     pub fn net_info(&self, system:&mut System) -> Vec<NetInfo> {
-        system.refresh_networks_list();
         let mut name_rxptx: HashMap<String,(u64,u64)> = HashMap::new();
-        for (interface_name, data) in system.networks() {
-            name_rxptx.entry(interface_name.to_string()).or_insert((data.received(), data.transmitted()));
-        }
-    
+        system.refresh_networks_list();
         sleep(Duration::from_secs(1));
         for (interface_name, data) in system.networks() {
-            name_rxptx.entry(interface_name.to_string()).and_modify(|rx_tx| {
-                rx_tx.0 = data.received() - rx_tx.0;
-                rx_tx.1 = data.transmitted() - rx_tx.1;
-            });
+            name_rxptx.entry(interface_name.to_string()).or_insert((data.total_received(), data.total_transmitted()));
         }
         let mut net_infos: Vec<NetInfo> = Vec::new();
         for (interface_name, (rx, tx)) in name_rxptx.into_iter() {

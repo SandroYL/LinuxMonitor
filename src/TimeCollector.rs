@@ -6,9 +6,9 @@ use LinuxMonitor::monitor_tools::{static_data_monitor::StaticDataMonitor, time_s
 use sysinfo::{System, SystemExt};
 
 pub struct Collectors {
-    system: System,
-    static_datas: StaticDataMonitor,
-    time_datas: TimeSeriesMonitor,
+    pub system: System,
+    pub static_datas: StaticDataMonitor,
+    pub time_datas: TimeSeriesMonitor,
 }
 
 impl Collectors {

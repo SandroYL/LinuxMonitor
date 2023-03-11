@@ -3,14 +3,14 @@
 use std::fmt;
 
 pub struct CPUTimes {
-    device          : String,
-    user            : u128,
-    guest_user      : u128,
-    system          : u128,
-    idle            : u128,
-    iowait          : u128,
-    irq             : u128,
-    softirq         : u128,
+    pub device          : String,
+    pub user            : u128,
+    pub guest_user      : u128,
+    pub system          : u128,
+    pub idle            : u128,
+    pub iowait          : u128,
+    pub irq             : u128,
+    pub softirq         : u128,
 }
 
 pub struct CPUInfos {
@@ -46,8 +46,8 @@ pub struct ACPIInfo {
 /// 
 /// 结果保存在Vec中，0-16为核心温度，17-19为风扇温度
 pub struct DeviceTemperature {
-    device          : String,
-    temperature     : i64,
+    pub device          : String,
+    pub temperature     : i64,
 }
 
 pub struct DeviceVoltage {
@@ -56,9 +56,9 @@ pub struct DeviceVoltage {
 }
 
 pub struct NetInfo {
-    interface_name: String,
-    d_receive: f64,
-    d_transmit: f64,
+    pub interface_name: String,
+    pub d_receive: f64,
+    pub d_transmit: f64,
 }
 
 impl NetInfo {
@@ -78,6 +78,8 @@ impl NetInfo {
     pub fn get_transmit(&self) -> f64 {
         self.d_transmit
     }
+    // get transmit
+
 }
 
 impl MemoryInfo {
@@ -91,6 +93,8 @@ impl MemoryInfo {
             swap_cached,
         }
     }
+    //get mem_total
+        
 }
 impl fmt::Debug for MemoryInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -129,6 +133,7 @@ impl ACPIInfo {
             status, 
         }
     }
+
 }
 
 impl DeviceTemperature {
