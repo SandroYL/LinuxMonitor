@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 chrono = "0.4.23"
-num-bigint = "0.4.3"
 sysinfo = "0.28.1"
 tokio-postgres = "0.7.7"
 tokio = {version = "1.26.0", features = ["full"]}
+rand = "0.8.5"

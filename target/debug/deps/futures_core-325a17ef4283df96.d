@@ -1,0 +1,11 @@
+/home/guest/src/target/debug/deps/futures_core-325a17ef4283df96.rmeta: /home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/lib.rs /home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/future.rs /home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/stream.rs /home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/task/mod.rs /home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/task/poll.rs /home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/task/__internal/mod.rs /home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/task/__internal/atomic_waker.rs
+
+/home/guest/src/target/debug/deps/futures_core-325a17ef4283df96.d: /home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/lib.rs /home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/future.rs /home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/stream.rs /home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/task/mod.rs /home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/task/poll.rs /home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/task/__internal/mod.rs /home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/task/__internal/atomic_waker.rs
+
+/home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/lib.rs:
+/home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/future.rs:
+/home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/stream.rs:
+/home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/task/mod.rs:
+/home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/task/poll.rs:
+/home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/task/__internal/mod.rs:
+/home/guest/.cargo/registry/src/github.com-1ecc6299db9ec823/futures-core-0.3.27/src/task/__internal/atomic_waker.rs:

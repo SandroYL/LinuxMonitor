@@ -56,29 +56,23 @@ pub struct DeviceVoltage {
 }
 
 pub struct NetInfo {
-    pub interface_name: String,
-    pub d_receive: f64,
-    pub d_transmit: f64,
+    pub device: String,
+    pub iospeed: f64,
 }
 
 impl NetInfo {
-    pub fn new(interface_name: String, d_receive: f64, d_transmit: f64) -> NetInfo {
+    pub fn new(device: String, iospeed: f64) -> NetInfo {
         NetInfo { 
-            interface_name, 
-            d_receive, 
-            d_transmit, 
+            device, 
+            iospeed, 
         }
     }
     pub fn get_name(&self) -> String {
-        self.interface_name.clone()
+        self.device.clone()
     }
-    pub fn get_receive(&self) -> f64 {
-        self.d_receive
+    pub fn get_speed(&self) -> f64 {
+        self.iospeed
     }
-    pub fn get_transmit(&self) -> f64 {
-        self.d_transmit
-    }
-    // get transmit
 
 }
 

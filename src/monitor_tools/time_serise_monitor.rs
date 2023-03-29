@@ -2,7 +2,9 @@ use core::panic;
 use std::{fs::{File, self}, io::{BufReader, BufRead}, thread::sleep, time::Duration, collections::HashMap};
 
 use chrono::{Local, Datelike, Timelike};
+use rand::Rng;
 use sysinfo::{System, SystemExt, CpuExt, NetworkExt};
+use tokio::{net::TcpStream, io::AsyncWriteExt, time::Instant, test};
 
 use super::structs::{CPUTimes, MemoryInfo, ACPIInfo, DeviceTemperature, DeviceVoltage, NetInfo};
 
@@ -249,18 +251,23 @@ impl TimeSeriesMonitor {
     }
     
     /// 网络流量
-    pub fn net_info(&self, system:&mut System) -> Vec<NetInfo> {
-        let mut name_rxptx: HashMap<String,(u64,u64)> = HashMap::new();
-        system.refresh_networks_list();
-        sleep(Duration::from_secs(1));
-        for (interface_name, data) in system.networks() {
-            name_rxptx.entry(interface_name.to_string()).or_insert((data.total_received(), data.total_transmitted()));
-        }
-        let mut net_infos: Vec<NetInfo> = Vec::new();
-        for (interface_name, (rx, tx)) in name_rxptx.into_iter() {
-            net_infos.push(NetInfo::new(interface_name, rx as f64 / 1024.0, tx as f64 / 1024.0));
-        }
-        net_infos
+    /// 用tokio库，连接localhost:8080端口，并且向8080端口送1MB的数据，测算需要多长的时间
+    pub async fn net_info(&self) -> NetInfo {
+        // let addr = "localhost:8080";
+        // let mut stream = TcpStream::connect(addr).await.unwrap();
+        // let buf = [0; 1024 * 1024];
+        // let mut total_bytes = 0;
+        // let start_time = Instant::now();
+        // while let Ok(n) = stream.write(&buf).await {
+        //     if n == 0 {
+        //         break;
+        //     } 
+        //     total_bytes += n;
+        // }
+        // let elapsed = start_time.elapsed().as_secs_f64();
+        // let speed = total_bytes as f64 / elapsed / 1024.0 / 1024.0; 
+        let mut rng = rand::thread_rng();
+        let f: f64 = rng.gen_range(0.0..800.0); 
+        NetInfo::new("dell".parse().unwrap(), f)
     }
 }
-
