@@ -33,22 +33,14 @@ async fn main() -> Result<(), Error> {
 async fn write_data(client: &Client) -> Result<(), tokio_postgres::Error> {
     let mut system = System::new_all();
     //一些测试数据
-    let test_1 = vec![
-        String::from("fan1"),
-        String::from("fan2"),
-        String::from("fan3"),
-        String::from("fan4"),
-    ];
-    let test_2 = vec![
-        String::from("impl1"),
-        String::from("impl2"),
-        String::from("impl3"),
-        String::from("impl4"),
-        String::from("impl5"),
-        String::from("impl6"),
-        String::from("impl7"),
-        String::from("impl8"),
-    ];
+
+    let environment_temp = String::from("env_temp");
+    let disk = vec![String::from("C"), String::from("D"), String::from("E"), String::from("F")];
+    let fan_speed = String::from("fans");
+    let models = vec![String::from("TCN"), String::from("LSTM"), 
+                                    String::from("ARIMA"), String::from("BAYES"), String::from("MARKOV")];
+
+
     let interval = Duration::milliseconds(990);
     loop {
         //十秒一次
@@ -88,24 +80,44 @@ async fn write_data(client: &Client) -> Result<(), tokio_postgres::Error> {
         );
         client.query(&query, &[]).await?;
         let mut rng = rand::thread_rng();
-        for i in 0..4 {
+
+        let query = format!(
+            "insert into env_temp values ('{}', '{}', {})",
+            timestamp,
+            environment_temp,
+            rng.gen_range(0..=50000)
+        );
+        client.query(&query, &[]).await?;
+
+        for i in 0..disk.len() {
             let query = format!(
-                "insert into test1 values ('{}', '{}', {})",
+                "insert into disk values ('{}', '{}', {})",
                 timestamp,
-                test_1[i],
-                rng.gen_range(0..=100)
+                disk[i],
+                rng.gen_range(0..=50000)
             );
             client.query(&query, &[]).await?;
         }
-        for i in 0..8 {
+
+        let query = format!(
+            "insert into fan_speed values ('{}', '{}', {})",
+            timestamp,
+            fan_speed,
+            rng.gen_range(0..=300)
+        );
+        client.query(&query, &[]).await?;
+        
+        for i in 0..models.len() {
+            let ratio = rng.gen_range(0.9..=1.1);
             let query = format!(
-                "insert into test2 values ('{}', '{}', {})",
+                "insert into models values ('{}', '{}', {})",
                 timestamp,
-                test_2[i],
-                rng.gen_range(20..=80)
+                models[i],
+                ratio
             );
             client.query(&query, &[]).await?;
         }
+
 
         let sleep_duration = next_timestamp.signed_duration_since(Utc::now());
         sleep(sleep_duration.to_std().unwrap());
