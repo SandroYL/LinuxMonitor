@@ -1,219 +1,89 @@
-use core::panic;
-use std::{fs::{File, self}, io::{BufReader, BufRead}, thread::sleep, time::Duration, collections::HashMap};
 
-use chrono::{Local, Datelike, Timelike};
-use rand::Rng;
-use sysinfo::{System, SystemExt, CpuExt, NetworkExt};
-use tokio::{net::TcpStream, io::AsyncWriteExt, time::Instant, test};
+use std::{fs::{self}, time::Duration, thread};
+use sysinfo::{System, SystemExt, CpuExt, DiskExt, NetworkExt};
 
-use super::structs::{CPUTimes, MemoryInfo, ACPIInfo, DeviceTemperature, DeviceVoltage, NetInfo};
+use super::structs::{CPUUsage, MemoryInfo, TemperatureInfo, FanInfo, NetInfo, CacheInfo, DiskInfo};
 
 
-pub struct TimeSeriesMonitor {}
+pub struct TimeSeriesMonitor {
+    system: System,
+}
 
 impl TimeSeriesMonitor {
 
     pub fn new() ->TimeSeriesMonitor {
-        TimeSeriesMonitor {  }
+        let system = System::new_all();
+        TimeSeriesMonitor { 
+            system
+        }
+    }
+    
+    pub fn refresh(&mut self) {
+        self.system.refresh_cpu();
+        self.system.refresh_disks();
+        self.system.refresh_memory();
+        self.system.refresh_networks_list();
+        self.system.refresh_system();
     }
 
-    pub fn get_current_time_parse(&self) -> String {
-        let cur_time = Local::now();
-    
-        let mut ymd_hms:String = Default::default();
-        let year = cur_time.year();
-        let month = cur_time.month();
-        let day = cur_time.day();
-        let hour = cur_time.hour();
-        let minu = cur_time.minute();
-        let sec = cur_time.second();
-        ymd_hms = format!("{}-{}-{}-{}-{}-{}",year,month,day,hour,minu,sec);
-        
-        ymd_hms
+    ///已启动时间
+    pub fn boot_time(&self) -> u64 {
+        self.system.boot_time()
     }
-    
-    pub fn get_uptime_parse(&self) -> String {
-        let file = match File::open("/proc/uptime") {
-            Ok(fp) => fp,
-            Err(_) => {
-                panic!("ERROR_UPTIME");
-            }  
-        };
-        let line = BufReader::new(file).lines().nth(0);
-        let ret = match line.unwrap() {
-            Ok(two_times) => {
-                let mut strs = two_times.split(' ');
-                strs.nth(0).unwrap().to_string()
-            },
-            Err(_) => {
-                "NotFound!".to_string()
-            }
-        };
-        ret
-    }
-    
-    pub fn cpu_time_info(&self) -> Vec<CPUTimes> {
-        let file = match File::open("/proc/stat") {
-            Ok(fp) => fp,
-            Err(_) => {
-                panic!("ERROR_CPUINFO");
-            }  
-        };
-        let lines = BufReader::new(file).lines();
-        let mut cpu_time_info_vecs:Vec<CPUTimes> = Vec::new();
-        for line in lines.take(33) {
-            let total_info = line.unwrap().replace("  ", " ");
-            let mut infos = total_info.split(' ');
-            let name       = infos.next().unwrap().to_string();
-            let user        : u128 = infos.next().unwrap().parse().unwrap();
-            let guest_user  : u128 = infos.next().unwrap().parse().unwrap();
-            let system      : u128 = infos.next().unwrap().parse().unwrap();
-            let idle        : u128 = infos.next().unwrap().parse().unwrap();
-            let iowait      : u128 = infos.next().unwrap().parse().unwrap();
-            let irq         : u128 = infos.next().unwrap().parse().unwrap();
-            let softirq     : u128 = infos.next().unwrap().parse().unwrap();
-            cpu_time_info_vecs.push(CPUTimes::new(
-                name, 
-                user, 
-                guest_user, 
-                system, 
-                idle, 
-                iowait, 
-                irq, 
-                softirq,
-            ));
+
+    ///cpu利用率，cpu频率
+    pub fn cpu_usage(&self) -> CPUUsage {
+        let cpu = self.system.global_cpu_info();
+        CPUUsage {
+            device: String::from(cpu.name()), 
+            usage: cpu.cpu_usage(),
+            freq: cpu.frequency(),
         }
-        cpu_time_info_vecs
     }
     
     /// 内存模块部分重要信息
     /// 
     /// 详细请见 Instrucment 内的部分说明
-    pub fn sys_mem_info(&self) -> MemoryInfo {
-        let file = match File::open("/proc/meminfo") {
-            Ok(fp) => fp,
-            Err(_) => {
-                panic!("ERROR_MEMINFO");
-            }  
-        };
-        let lines = BufReader::new(file).lines();
-        let (mut mem_total, mut mem_free, mut mem_available, mut buffers, mut cached, mut swap_cached) = (0, 0, 0, 0, 0, 0);
-        for line in lines.take(6) {
-            let total_info = line.unwrap().replace(" ", "");
-            let mut infos = total_info.split(':');
-            match infos.next() {
-                Some("MemTotal") => mem_total = infos.next()
-                                                    .unwrap()
-                                                    .chars()
-                                                    .filter(|ch| ch.is_numeric())
-                                                    .collect::<String>()
-                                                    .parse::<u128>()
-                                                    .unwrap(),
-                Some("MemFree") => mem_free = infos.next()
-                                                    .unwrap()
-                                                    .chars()
-                                                    .filter(|ch| ch.is_numeric())
-                                                    .collect::<String>()
-                                                    .parse::<u128>()
-                                                    .unwrap(),
-                Some("MemAvailable") => mem_available = infos.next()
-                                                .unwrap()
-                                                .chars()
-                                                .filter(|ch| ch.is_numeric())
-                                                .collect::<String>()
-                                                .parse::<u128>()
-                                                .unwrap(),
-                Some("Buffers") => buffers = infos.next()
-                                                .unwrap()
-                                                .chars()
-                                                .filter(|ch| ch.is_numeric())
-                                                .collect::<String>()
-                                                .parse::<u128>()
-                                                .unwrap(),
-                Some("Cached") => cached = infos.next()
-                                                .unwrap()
-                                                .chars()
-                                                .filter(|ch| ch.is_numeric())
-                                                .collect::<String>()
-                                                .parse::<u128>()
-                                                .unwrap(),
-                Some("SwapCached") => swap_cached = infos.next()
-                                                    .unwrap()
-                                                    .chars()
-                                                    .filter(|ch| ch.is_numeric())
-                                                    .collect::<String>()
-                                                    .parse::<u128>()
-                                                    .unwrap(),
-                Some(_) => panic!("Memory parse Error line 141"),
-                None => panic!("Memory parse Error line 142"),
-            }
-        }
+    pub fn mem_info(&self) -> MemoryInfo {
+        let (mem_total, mem_available, mem_used) =
+            (self.system.total_memory(), self.system.available_memory(),
+                self.system.used_memory());
         MemoryInfo::new(
-            mem_total, 
-            mem_free, 
-            mem_available, 
-            buffers, 
-            cached, 
-            swap_cached,
+            mem_total,
+            mem_available,
+            mem_used,
+            mem_used as f64 * 100.0 / mem_total as f64,
+
         )
     }
     
-    pub fn acpi_info(&self) -> Vec<ACPIInfo> {
-        let file = match File::open("/proc/acpi/wakeup") {
-            Ok(fp) => fp,
-            Err(_) => {
-                panic!("ERROR_ACPI");
-            }  
-        };
-        let mut lines = BufReader::new(file).lines();
-        let mut acpi_info_vec: Vec<ACPIInfo> = Vec::new();
-        lines.next();
-        for line in lines {
-            let line = line.unwrap();
-            let line = line.split_ascii_whitespace();
-            let (mut device, mut s_state, mut status): (String, String, String) = (Default::default(), Default::default(), Default::default());
-            let mut count = 0;
-            for info in line {
-                match count {
-                    0 => {
-                        count += 1;
-                        device = info.to_string();
-                    },
-                    1 => {
-                        count += 1;
-                        s_state = info.to_string();
-                    }
-                    2 => {
-                        count = 3;
-                        status = info.to_string();
-                    }
-                    _ => {}
-                }
-            }
-            acpi_info_vec.push(ACPIInfo::new (
-                device,
-                s_state,
-                status,
-            ));
-        }
-        acpi_info_vec
-    } 
+    pub fn cache_info(&self) -> CacheInfo {
+        let (swap_total, free_total, used_total) = 
+            (self.system.total_swap(), self.system.free_swap(),
+                self.system.used_swap());
+        CacheInfo::new(
+            swap_total,
+            free_total,
+            used_total,
+            used_total as f64 * 100.0 / swap_total as f64,
+        )
+    }
+
     
     /// 可以挖掘的温度检测模块
     /// 
     /// 以vec中device_name,volt形式返回
-    pub fn temperature_info(&self) -> Vec<DeviceTemperature> {
-        let mut temperatures: Vec<DeviceTemperature> = Vec::new();
-    
+    pub fn temperature_info(&self) -> Vec<TemperatureInfo> {
+        let mut temperatures: Vec<TemperatureInfo> = Vec::new();
         //for core
-        for i in 1..=64 {
+        for i in 1..=4096 {
             let device = format!("core{}", i);
             let file_path = format!("/sys/class/hwmon/hwmon0/temp{}_input", i);
             let data = match fs::read_to_string(file_path) {
                 Ok(infos) => infos,
                 Err(_) => break,
             };
-            temperatures.push(DeviceTemperature::new(
+            temperatures.push(TemperatureInfo::new(
                 device,
                 data.trim_end().parse::<i64>().unwrap()
             ));
@@ -222,52 +92,40 @@ impl TimeSeriesMonitor {
     }
     
     /// 可以挖掘的电压检测模块
-    pub fn voltage_info(&self) -> Vec<DeviceVoltage> {
-        let mut voltages: Vec<DeviceVoltage> = Vec::new();
+    pub fn fan_info(&self) -> Vec<FanInfo> {
+        let mut fans: Vec<FanInfo> = Vec::new();
         // for fans
-        for i in 1..=32 {
+        for i in 1..=4096 {
             let device = format!("fans{}", i);
             let file_path = format!("/sys/class/hwmon/hwmon1/fan{}_input", i);
             let data = match fs::read_to_string(file_path) {
                 Ok(infos) => infos,
                 Err(_) => break,
             };
-            voltages.push(DeviceVoltage::new(
+            fans.push(FanInfo::new(
                 device,
                 data.trim_end().parse::<i64>().unwrap()
             ));
         }
-        voltages
-    }
-    
-    /// cpu使用率
-    pub fn cpu_usage_info(&self, system:&mut System) -> Vec<f32>  {
-        system.refresh_cpu();
-        let mut ret:Vec<f32> = Vec::new();
-        for cpu in system.cpus() {
-            ret.push(cpu.cpu_usage());
-        }
-        ret
+        fans
     }
     
     /// 网络流量
-    /// 用tokio库，连接localhost:8080端口，并且向8080端口送1MB的数据，测算需要多长的时间
-    pub async fn net_info(&self) -> NetInfo {
-        // let addr = "localhost:8080";
-        // let mut stream = TcpStream::connect(addr).await.unwrap();
-        // let buf = [0; 1024 * 1024];
-        // let mut total_bytes = 0;
-        // let start_time = Instant::now();
-        // while let Ok(n) = stream.write(&buf).await {
-        //     if n == 0 {
-        //         break;
-        //     } 
-        //     total_bytes += n;
-        // }
-        // let elapsed = start_time.elapsed().as_secs_f64();
-        // let speed = total_bytes as f64 / elapsed / 1024.0 / 1024.0; 
-        let mut rng = rand::thread_rng();
-        let f: f64 = rng.gen_range(0.0..800.0); 
-        NetInfo::new("dell".parse().unwrap(), f)
+    pub fn net_info(&self, duration: Duration) -> NetInfo {
+        let nets = self.system.networks();
+        let (mut recv, mut trans) = (0, 0);
+        for (_, data) in nets {
+            recv += data.received();
+            trans += data.transmitted();
+        }
+
+        NetInfo::new(self.system.host_name().unwrap(), recv, trans, recv as f64 / duration.as_secs_f64(), trans as f64 / duration.as_secs_f64())
+    }
+
+    pub fn disk_info(&self) -> Vec<DiskInfo> {
+        let disks = self.system.disks();
+        disks.into_iter()
+        .map(|disk| DiskInfo::new(String::from(disk.name().to_str().unwrap()), disk.total_space(), disk.available_space()))
+        .collect()
     }
 }

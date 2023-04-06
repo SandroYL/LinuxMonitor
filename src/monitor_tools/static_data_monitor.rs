@@ -1,13 +1,20 @@
 use std::{fs::File, io::{BufReader, BufRead}};
+use sysinfo::{System, SystemExt};
+
 use super::structs::CPUInfos;
 
 
-pub struct StaticDataMonitor {}
+pub struct StaticDataMonitor {
+    system: System,
+}
 
 impl StaticDataMonitor {
 
     pub fn new() -> StaticDataMonitor {
-        StaticDataMonitor {  }
+        let system = System::new_all();
+        StaticDataMonitor {  
+            system,
+        }
     }
 
     pub fn get_device_name(&self) -> String {

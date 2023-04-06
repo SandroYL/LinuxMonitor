@@ -2,15 +2,10 @@
 
 use std::fmt;
 
-pub struct CPUTimes {
+pub struct CPUUsage {
     pub device          : String,
-    pub user            : u128,
-    pub guest_user      : u128,
-    pub system          : u128,
-    pub idle            : u128,
-    pub iowait          : u128,
-    pub irq             : u128,
-    pub softirq         : u128,
+    pub usage           : f32,
+    pub freq            : u64,
 }
 
 pub struct CPUInfos {
@@ -28,111 +23,105 @@ pub struct CPUInfos {
 /// 
 /// 只选取了部分信息, 单位为 kB
 pub struct MemoryInfo {
-    mem_total       : u128,
-    mem_free        : u128,
-    mem_available   : u128,
-    buffers         : u128,
-    cached          : u128,
-    swap_cached     : u128,
+    pub mem_total       : u64,
+    mem_available   : u64,
+    pub mem_used        : u64,
+    mem_usage       : f64,
 }
-/// 详情见instrucment.md内说明
-pub struct ACPIInfo {
-    device          : String,
-    s_state         : String,
-    status          : String,
+pub struct CacheInfo {
+    pub swap_total      : u64,
+    free_total      : u64,
+    pub used_total      : u64,
+    usage           : f64,
+}
+
+pub struct DiskInfo {
+    pub disk_name       : String,
+    pub space_total     : u64,
+    pub space_available : u64,
 }
 
 /// 对设备温度监控
 /// 
-/// 结果保存在Vec中，0-16为核心温度，17-19为风扇温度
-pub struct DeviceTemperature {
+pub struct TemperatureInfo {
     pub device          : String,
     pub temperature     : i64,
 }
 
-pub struct DeviceVoltage {
-    device          : String,
-    voltage         : i64,
+pub struct FanInfo {
+    pub device          : String,
+    pub voltage         : i64,
 }
 
 pub struct NetInfo {
     pub device: String,
-    pub iospeed: f64,
+    pub recv: u64,
+    pub trans: u64,
+    pub speed_recv: f64,
+    pub speed_trans: f64,
+}
+
+impl DiskInfo {
+    pub fn new(disk_name: String, space_total: u64, space_available: u64) -> DiskInfo {
+        DiskInfo { 
+            disk_name,
+            space_total,
+            space_available,
+        }
+    }
 }
 
 impl NetInfo {
-    pub fn new(device: String, iospeed: f64) -> NetInfo {
+    pub fn new(device: String, recv: u64, trans: u64, speed_recv: f64, speed_trans: f64) -> NetInfo {
         NetInfo { 
             device, 
-            iospeed, 
+            recv,
+            trans,
+            speed_recv,
+            speed_trans,
         }
     }
-    pub fn get_name(&self) -> String {
-        self.device.clone()
-    }
-    pub fn get_speed(&self) -> f64 {
-        self.iospeed
-    }
-
 }
 
 impl MemoryInfo {
-    pub fn new (mem_total: u128, mem_free: u128, mem_available: u128, buffers: u128, cached: u128, swap_cached: u128) -> MemoryInfo {
+    pub fn new (mem_total: u64, mem_available: u64, mem_used: u64, mem_usage: f64,) -> MemoryInfo {
         MemoryInfo { 
             mem_total, 
-            mem_free, 
             mem_available, 
-            buffers, 
-            cached, 
-            swap_cached,
+            mem_used, 
+            mem_usage,
         }
     }
-    //get mem_total
-        
 }
-impl fmt::Debug for MemoryInfo {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "总内存大小: {}GB, 空闲内存大小: {}GB, 可用内存大小: {}GB, buffer缓存: {}MB, cache缓存: {}MB, swap_cached:{}MB",self.mem_total / 1024 / 1024, self.mem_free / 1024 / 1024, self.mem_available / 1024 / 1024, self.buffers / 1024, self.cached / 1024, self.swap_cached / 1024)
+
+impl CacheInfo {
+    pub fn new(swap_total: u64, free_total: u64, 
+        used_total: u64, usage: f64) -> CacheInfo {
+            CacheInfo { 
+                swap_total, 
+                free_total,
+                used_total, 
+                usage, 
+            }
     }
 }
 
-
-
-impl CPUTimes {
-    pub fn new(device: String, user: u128, guest_user: u128, system: u128, idle: u128, iowait: u128, irq: u128, softirq: u128) -> CPUTimes {
-        CPUTimes { 
+impl CPUUsage {
+    pub fn new(device: String, usage: f32, freq: u64) -> CPUUsage {
+        CPUUsage { 
             device, 
-            user, 
-            guest_user, 
-            system, 
-            idle, 
-            iowait, 
-            irq, 
-            softirq, 
+            usage,
+            freq,
         }
     }   
 }
-impl fmt::Debug for CPUTimes {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "CPU编号: {}, 用户态时间: {}s, 用户态低优先级时间: {}s, 系统态时间: {}s, 空闲态时间: {}s, IO等待时间: {}s, 硬中断时间: {}s, 软中断时间: {}s", self.device, self.user, self.guest_user, self.system, self.idle, self.iowait, self.irq, self.softirq)
-    }
-}
 
 
-impl ACPIInfo {
-    pub fn new (device: String, s_state: String, status: String) -> ACPIInfo {
-        ACPIInfo { 
-            device, 
-            s_state, 
-            status, 
-        }
-    }
 
-}
 
-impl DeviceTemperature {
-    pub fn new (device: String, temperature: i64) -> DeviceTemperature {
-        DeviceTemperature { 
+impl TemperatureInfo {
+    pub fn new (device: String, temperature: i64) -> TemperatureInfo {
+        TemperatureInfo { 
             device, 
             temperature,
         }
@@ -145,26 +134,16 @@ impl DeviceTemperature {
     }
 }
 
-impl fmt::Debug for DeviceTemperature {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "设备名: {}, 设备温度: {}°C", self.get_name(), self.get_temperature() / 1000)
-    }
-}
 
-impl DeviceVoltage {
-    pub fn new (device: String, voltage: i64) -> DeviceVoltage {
-        DeviceVoltage { 
+impl FanInfo {
+    pub fn new (device: String, voltage: i64) -> FanInfo {
+        FanInfo { 
             device, 
             voltage,
         }
     }
 }
 
-impl fmt::Debug for DeviceVoltage {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "设备名: {}, 设备电压: {}mV", self.device, self.voltage)
-    }
-}
 
 impl CPUInfos {
     pub fn new (processor: usize, vendor_id: String, cpu_family: usize, model: usize,
@@ -180,16 +159,5 @@ impl CPUInfos {
             cpu_mhz,
             cache_size_kb, 
         }
-    }
-}
-impl fmt::Debug for CPUInfos {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "processor:{},vendor_id:{},cpu_family:{},model:{},model_name:{},stepping:{},microcode:{},cpu_mhz:{},cache_size_kb:{}", self.processor, self.vendor_id, self.cpu_family, self.model, self.model_name, self.stepping, self.microcode, self.cpu_mhz, self.cache_size_kb)
-    }
-}
-
-impl fmt::Debug for ACPIInfo {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "设备名称: {}, 设备状态: {}, 可用或断电: {}", self.device, self.s_state, self.status)
     }
 }

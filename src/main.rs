@@ -1,11 +1,9 @@
-use std::thread::sleep;
+use std::{thread::sleep, time::Duration};
 
-use chrono::{Duration, Utc};
+use LinuxMonitor::monitor_tools::time_serise_monitor::TimeSeriesMonitor;
+use chrono::{Utc};
 use rand::Rng;
-use sysinfo::{System, SystemExt};
 use tokio_postgres::{Client, Error, NoTls};
-
-pub mod TimeCollector;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -31,82 +29,82 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn write_data(client: &Client) -> Result<(), tokio_postgres::Error> {
-    let mut system = System::new_all();
     //一些测试数据
+    let mut dataGenerator = TimeSeriesMonitor::new();
 
-    let environment_temp = String::from("env_temp");
-    let disk = vec![String::from("C"), String::from("D"), String::from("E"), String::from("F")];
-    let fan_speed = String::from("fans");
     let models = vec![String::from("TCN"), String::from("LSTM"), 
                                     String::from("ARIMA"), String::from("BAYES"), String::from("MARKOV")];
 
 
-    let interval = Duration::milliseconds(990);
+    let interval = Duration::from_millis(990);
     loop {
         //十秒一次
         let timestamp = Utc::now();
-        let next_timestamp = timestamp + interval;
-        system.refresh_all();
-        let Collectors = TimeCollector::Collectors::new();
-        let cpu_infos = Collectors.time_datas.cpu_time_info();
-        let cpu_usage = Collectors.time_datas.cpu_usage_info(&mut system);
+        dataGenerator.refresh();
+        let next_timestamp = timestamp.checked_add_signed(chrono::Duration::milliseconds(interval.as_millis() as i64)).unwrap();
+        
+        let cpu_info = dataGenerator.cpu_usage();
+        let query = format!(
+            "insert into cpu_time values ('{}', '{}', {});"
+            , timestamp, cpu_info.device, cpu_info.usage
+        );
+        client.query(&query, &[]).await?;
+        let query = format!(
+            "insert into cpu_freq values ('{}', '{}', {});"
+            , timestamp, cpu_info.device, cpu_info.freq
+        );
+        client.query(&query, &[]).await?;
 
-        for ctimes in cpu_infos.into_iter().zip(cpu_usage) {
-            let query = format!(
-                "insert into cpu_time values ('{}', '{}', {})",
-                timestamp, ctimes.0.device, ctimes.1
-            );
-            client.query(&query, &[]).await?;
-        }
-
-        let temperature_info = Collectors.time_datas.temperature_info();
+        let temperature_info = dataGenerator.temperature_info();
         for temp in temperature_info.into_iter() {
             let query = format!(
-                "insert into temperature values ('{}', '{}' , {})",
-                timestamp,
-                temp.get_name(),
-                temp.temperature
+                "insert into temperature values ('{}', '{}' , {});"
+                , timestamp, temp.get_name(), temp.temperature
             );
             client.query(&query, &[]).await?;
         }
 
-        let net_info = Collectors.time_datas.net_info().await;
-
-        let query = format!(
-            "insert into internet values ('{}', '{}', {})",
-            timestamp,
-            net_info.device,
-            net_info.get_speed(),
-        );
-        client.query(&query, &[]).await?;
-        let mut rng = rand::thread_rng();
-
-        let query = format!(
-            "insert into env_temp values ('{}', '{}', {})",
-            timestamp,
-            environment_temp,
-            rng.gen_range(0..=50000)
-        );
-        client.query(&query, &[]).await?;
-
-        for i in 0..disk.len() {
+        let fan_info = dataGenerator.fan_info();
+        for fan in fan_info.into_iter() {
             let query = format!(
-                "insert into disk values ('{}', '{}', {})",
-                timestamp,
-                disk[i],
-                rng.gen_range(0..=50000)
+                "insert into fan_speed values ('{}', '{}' , {});"
+                , timestamp, fan.device, fan.voltage,
             );
             client.query(&query, &[]).await?;
         }
 
+        let net_info = dataGenerator.net_info(interval);
         let query = format!(
-            "insert into fan_speed values ('{}', '{}', {})",
-            timestamp,
-            fan_speed,
-            rng.gen_range(0..=300)
+            "insert into internet values ('{}', '{}', {}, {});"
+            , timestamp, net_info.device, net_info.speed_recv, net_info.speed_trans,
+        );
+        client.query(&query, &[]).await?;
+
+        let disks = dataGenerator.disk_info();
+        for disk in disks {
+            let query = format!(
+                "insert into disk values ('{}', '{}', {}, {});"
+                , timestamp, disk.disk_name, disk.space_total, disk.space_available,
+            );
+            client.query(&query, &[]).await?;
+        }
+
+        let mem = dataGenerator.mem_info();
+        let query = format!(
+            "insert into memory values ('{}', '{}', {}, {});"
+            , timestamp, String::from("dells"), mem.mem_total, mem.mem_used,
+        );
+        client.query(&query, &[]).await?;
+
+        let cache = dataGenerator.cache_info();
+        let query = format!(
+            "insert into cache values ('{}', '{}', {}, {});"
+            , timestamp, String::from("dells"), cache.swap_total, cache.used_total,
         );
         client.query(&query, &[]).await?;
         
+        let mut rng = rand::thread_rng();
+
         for i in 0..models.len() {
             let ratio = rng.gen_range(0.9..=1.1);
             let query = format!(
