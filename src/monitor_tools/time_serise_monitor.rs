@@ -1,5 +1,5 @@
 
-use std::{fs::{self}, time::Duration, thread};
+use std::{fs::{self}, time::Duration};
 use sysinfo::{System, SystemExt, CpuExt, DiskExt, NetworkExt};
 
 use super::structs::{CPUUsage, MemoryInfo, TemperatureInfo, FanInfo, NetInfo, CacheInfo, DiskInfo};
@@ -19,9 +19,7 @@ impl TimeSeriesMonitor {
     }
     
     pub fn refresh(&mut self) {
-        self.system.refresh_cpu();
         self.system.refresh_disks();
-        self.system.refresh_memory();
         self.system.refresh_networks_list();
         self.system.refresh_system();
     }

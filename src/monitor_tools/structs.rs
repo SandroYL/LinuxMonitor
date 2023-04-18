@@ -1,7 +1,5 @@
 // 定义所有要用到的结构
 
-use std::fmt;
-
 pub struct CPUUsage {
     pub device          : String,
     pub usage           : f32,
@@ -24,13 +22,13 @@ pub struct CPUInfos {
 /// 只选取了部分信息, 单位为 kB
 pub struct MemoryInfo {
     pub mem_total       : u64,
-    mem_available   : u64,
+    pub mem_available   : u64,
     pub mem_used        : u64,
     mem_usage       : f64,
 }
 pub struct CacheInfo {
     pub swap_total      : u64,
-    free_total      : u64,
+    pub free_total      : u64,
     pub used_total      : u64,
     usage           : f64,
 }

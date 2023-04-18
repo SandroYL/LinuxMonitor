@@ -37,8 +37,33 @@ async fn write_data(client: &Client) -> Result<(), tokio_postgres::Error> {
 
 
     let interval = Duration::from_millis(990);
+    let i = 0;
+    client.query("truncate cache;", &[]).await?;
+    client.query("truncate cpu_freq;", &[]).await?;
+    client.query("truncate cpu_time;", &[]).await?;
+    client.query("truncate cpu_time_usage_predict;", &[]).await?;
+    client.query("truncate disk;", &[]).await?;
+    client.query("truncate env_temp;", &[]).await?;
+    client.query("truncate fan_speed;", &[]).await?;
+    client.query("truncate internet;", &[]).await?;
+    client.query("truncate ram;", &[]).await?;
+    client.query("truncate models;", &[]).await?;
+    client.query("truncate temperature;", &[]).await?;
     loop {
         //十秒一次
+        if i == 1000 {
+            client.query("truncate cache;", &[]).await?;
+            client.query("truncate cpu_freq;", &[]).await?;
+            client.query("truncate cpu_time;", &[]).await?;
+            client.query("truncate cpu_time_usage_predict;", &[]).await?;
+            client.query("truncate disk;", &[]).await?;
+            client.query("truncate env_temp;", &[]).await?;
+            client.query("truncate fan_speed;", &[]).await?;
+            client.query("truncate internet;", &[]).await?;
+            client.query("truncate ram;", &[]).await?;
+            client.query("truncate models;", &[]).await?;
+            client.query("truncate temperature;", &[]).await?;
+        }
         let timestamp = Utc::now();
         dataGenerator.refresh();
         let next_timestamp = timestamp.checked_add_signed(chrono::Duration::milliseconds(interval.as_millis() as i64)).unwrap();
@@ -91,15 +116,15 @@ async fn write_data(client: &Client) -> Result<(), tokio_postgres::Error> {
 
         let mem = dataGenerator.mem_info();
         let query = format!(
-            "insert into memory values ('{}', '{}', {}, {});"
-            , timestamp, String::from("dells"), mem.mem_total, mem.mem_used,
+            "insert into ram values ('{}', '{}', {}, {}, {});"
+            , timestamp, String::from("dells"), mem.mem_total, mem.mem_available, (mem.mem_total - mem.mem_available) as f64 * 100.0 / mem.mem_total as f64,
         );
         client.query(&query, &[]).await?;
 
         let cache = dataGenerator.cache_info();
         let query = format!(
             "insert into cache values ('{}', '{}', {}, {});"
-            , timestamp, String::from("dells"), cache.swap_total, cache.used_total,
+            , timestamp, String::from("dells"), cache.swap_total, cache.free_total,
         );
         client.query(&query, &[]).await?;
         
