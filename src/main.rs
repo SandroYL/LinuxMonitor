@@ -1,149 +1,184 @@
-use std::{thread::sleep, time::Duration};
+use LinuxMonitor::pgconn::run_collector;
+use aes::{Aes128, cipher::{KeyInit, generic_array::GenericArray}};
+use tokio_postgres::Error;
 
-use LinuxMonitor::monitor_tools::time_serise_monitor::TimeSeriesMonitor;
-use chrono::{Utc};
-use rand::Rng;
-use tokio_postgres::{Client, Error, NoTls};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    // 连接到数据库中
-    let (client, connection) =
-        tokio_postgres::connect("host=localhost user=postgres", NoTls).await?;
-    tokio::spawn(async move {
-        if let Err(e) = connection.await {
-            eprintln!("connection error: {}", e);
-        }
-    });
-
-    //准备数据
-    match write_data(&client).await {
-        Ok(_) => {
-            println!("success")
-        }
-        Err(e) => {
-            eprintln!("{}", e)
-        }
-    }
+    run_collector().await;
+    // benchmarks_insert();
+    // benchmarks_select();
     Ok(())
 }
 
-async fn write_data(client: &Client) -> Result<(), tokio_postgres::Error> {
-    //一些测试数据
-    let mut dataGenerator = TimeSeriesMonitor::new();
 
-    let models = vec![String::from("TCN"), String::from("LSTM"), 
-                                    String::from("ARIMA"), String::from("BAYES"), String::from("MARKOV")];
+// #[test]
+// fn benchmarks_insert() {
+//     let manager =
+//         PostgresConnectionManager::new("host=localhost user=postgres".parse().unwrap(), NoTls);
+//     let pool = r2d2::Pool::builder()
+//         .max_size(10)
+//         .connection_timeout(Duration::from_secs(30))
+//         .build(manager)
+//         .unwrap();
+//     let mut fp = File::create("insert_result").unwrap();
+//     let name = Arc::new(RwLock::new(vec![
+//         String::from("device1"),
+//         String::from("device2"),
+//         String::from("device3"),
+//         String::from("device4"),
+//         String::from("device5"),
+//         String::from("device6"),
+//         String::from("device7"),
+//         String::from("device8"),
+//         String::from("device9"),
+//         String::from("device10"),
+//     ]));
+//     for _ in 0..1000 {
+//         let mut nhandles = vec![];
+//         let mut yhandles = vec![];
+//         for i in 0..10 {
+//             let pool = pool.clone();
+//             let name = Arc::clone(&name);
+//             let handle = thread::spawn(move || {
+//                 let mut client = pool.get().unwrap();
+//                 let cur_time = Utc::now();
+//                 let query = format!(
+//                     "insert into nontime values ('{}', '{}', {})",
+//                     cur_time,
+//                     name.read().unwrap()[i % 10],
+//                     i
+//                 );
+//                 client.execute(&query, &[]).unwrap();
+//             });
+//             nhandles.push(handle);
+//         }
+//         for i in 0..10 {
+//             let pool = pool.clone();
+//             let name = Arc::clone(&name);
+//             let handle = thread::spawn(move || {
+//                 let mut client = pool.get().unwrap();
+//                 let cur_time = Utc::now();
+//                 let query = format!(
+//                     "insert into yestime values ('{}', '{}', {})",
+//                     cur_time,
+//                     name.read().unwrap()[i % 10],
+//                     i
+//                 );
+//                 client.execute(&query, &[]).unwrap();
+//             });
+//             yhandles.push(handle);
+//         }
+//         // println!("Testing insert! {} times testing..", j);
+//         let (mut m1, mut m2) = (0, 0);
+//         let startTime = Utc::now();
+//         for handle in nhandles {
+//             handle.join().unwrap();
+//         }
+//         let end_time = Utc::now();
+//         // println!("non Timescaledb: {:?}", (end_time - startTime).num_nanoseconds().unwrap());
+//         m1 = (end_time - startTime).num_nanoseconds().unwrap();
+//         let startTime = Utc::now();
+//         for handle in yhandles {
+//             handle.join().unwrap();
+//         }
+//         let end_time = Utc::now();
+//         m2 = (end_time - startTime).num_nanoseconds().unwrap();
+//         // println!("use Timescaledb: {:?}", (end_time - startTime).num_nanoseconds().unwrap());
+//         // println!("{} {}", m1, m2);
+//         let s = format!("{} {}\n", m1, m2);
+//         fp.write_all(s.as_bytes());
+//     }
+// }
+
+// #[test]
+// fn benchmarks_select() {
+//     let manager =
+//         PostgresConnectionManager::new("host=localhost user=postgres".parse().unwrap(), NoTls);
+//     let pool = r2d2::Pool::builder()
+//         .max_size(10)
+//         .connection_timeout(Duration::from_secs(30))
+//         .build(manager)
+//         .unwrap();
+//     let mut fp = File::create("select_result").unwrap();
+    
+//     let name = Arc::new(RwLock::new(vec![
+//         String::from("device1"),
+//         String::from("device2"),
+//         String::from("device3"),
+//         String::from("device4"),
+//         String::from("device5"),
+//         String::from("device6"),
+//         String::from("device7"),
+//         String::from("device8"),
+//         String::from("device9"),
+//         String::from("device10"),
+//     ]));
+//     for j in 0..1000 {
+//         let mut nhandles = vec![];
+//         let mut yhandles = vec![];
+//         for i in 0..10 {
+//             let pool = pool.clone();
+//             let name = Arc::clone(&name);
+//             let handle = thread::spawn(move || {
+//                 let mut client = pool.get().unwrap();
+//                 let cur_time = Utc::now();
+//                 let query = format!("select * from nontime where value = {}", i,);
+//                 client.execute(&query, &[]).unwrap();
+//             });
+//             nhandles.push(handle);
+//         }
+//         for i in 0..10 {
+//             let pool = pool.clone();
+//             let name = Arc::clone(&name);
+//             let handle = thread::spawn(move || {
+//                 let mut client = pool.get().unwrap();
+//                 let cur_time = Utc::now();
+//                 let query = format!("select * from yestime where value = {}", i,);
+//                 client.execute(&query, &[]).unwrap();
+//             });
+//             yhandles.push(handle);
+//         }
+//         // println!("Testing insert! {} times testing..", j);
+//         let (mut m1, mut m2) = (0, 0);
+//         let startTime = Utc::now();
+//         for handle in nhandles {
+//             handle.join().unwrap();
+//         }
+//         let end_time = Utc::now();
+//         // println!("non Timescaledb: {:?}", (end_time - startTime).num_nanoseconds().unwrap());
+//         m1 = (end_time - startTime).num_nanoseconds().unwrap();
+//         let startTime = Utc::now();
+//         for handle in yhandles {
+//             handle.join().unwrap();
+//         }
+//         let end_time = Utc::now();
+//         m2 = (end_time - startTime).num_nanoseconds().unwrap();
+//         // println!("use Timescaledb: {:?}", (end_time - startTime).num_nanoseconds().unwrap());
+//         // println!("{} {}", m1, m2);
+//         let s = format!("{} {}\n", m1, m2);
+//         fp.write_all(s.as_bytes());
+//     }
+// }
 
 
-    let interval = Duration::from_millis(990);
-    let i = 0;
-    client.query("truncate cache;", &[]).await?;
-    client.query("truncate cpu_freq;", &[]).await?;
-    client.query("truncate cpu_time;", &[]).await?;
-    client.query("truncate cpu_time_usage_predict;", &[]).await?;
-    client.query("truncate disk;", &[]).await?;
-    client.query("truncate env_temp;", &[]).await?;
-    client.query("truncate fan_speed;", &[]).await?;
-    client.query("truncate internet;", &[]).await?;
-    client.query("truncate ram;", &[]).await?;
-    client.query("truncate models;", &[]).await?;
-    client.query("truncate temperature;", &[]).await?;
-    loop {
-        //十秒一次
-        if i == 1000 {
-            client.query("truncate cache;", &[]).await?;
-            client.query("truncate cpu_freq;", &[]).await?;
-            client.query("truncate cpu_time;", &[]).await?;
-            client.query("truncate cpu_time_usage_predict;", &[]).await?;
-            client.query("truncate disk;", &[]).await?;
-            client.query("truncate env_temp;", &[]).await?;
-            client.query("truncate fan_speed;", &[]).await?;
-            client.query("truncate internet;", &[]).await?;
-            client.query("truncate ram;", &[]).await?;
-            client.query("truncate models;", &[]).await?;
-            client.query("truncate temperature;", &[]).await?;
-        }
-        let timestamp = Utc::now();
-        dataGenerator.refresh();
-        let next_timestamp = timestamp.checked_add_signed(chrono::Duration::milliseconds(interval.as_millis() as i64)).unwrap();
-        
-        let cpu_info = dataGenerator.cpu_usage();
-        let query = format!(
-            "insert into cpu_time values ('{}', '{}', {});"
-            , timestamp, cpu_info.device, cpu_info.usage
-        );
-        client.query(&query, &[]).await?;
-        let query = format!(
-            "insert into cpu_freq values ('{}', '{}', {});"
-            , timestamp, cpu_info.device, cpu_info.freq
-        );
-        client.query(&query, &[]).await?;
 
-        let temperature_info = dataGenerator.temperature_info();
-        for temp in temperature_info.into_iter() {
-            let query = format!(
-                "insert into temperature values ('{}', '{}' , {});"
-                , timestamp, temp.get_name(), temp.temperature
-            );
-            client.query(&query, &[]).await?;
-        }
+// #[tokio::test]
+// async fn backup_table() {
+//     let (client, connection) = tokio_postgres::connect("host=localhost user=postgres password=123456 dbname=postgres", NoTls).await.unwrap();
+//     tokio::spawn(async move {
+//         if let Err(e) = connection.await {
+//             eprintln!("connection error: {}", e);
+//         }
+//     });
+//     // 构建一个查询语句，用来选择表中的所有数据
+//     client.batch_execute("copy (select * from cpu_time) TO '/usr/lib/postgresql/15/backup/test.csv' WITH (FORMAT CSV);").await.unwrap();
+// }
 
-        let fan_info = dataGenerator.fan_info();
-        for fan in fan_info.into_iter() {
-            let query = format!(
-                "insert into fan_speed values ('{}', '{}' , {});"
-                , timestamp, fan.device, fan.voltage,
-            );
-            client.query(&query, &[]).await?;
-        }
-
-        let net_info = dataGenerator.net_info(interval);
-        let query = format!(
-            "insert into internet values ('{}', '{}', {}, {});"
-            , timestamp, net_info.device, net_info.speed_recv, net_info.speed_trans,
-        );
-        client.query(&query, &[]).await?;
-
-        let disks = dataGenerator.disk_info();
-        for disk in disks {
-            let query = format!(
-                "insert into disk values ('{}', '{}', {}, {});"
-                , timestamp, disk.disk_name, disk.space_total, disk.space_available,
-            );
-            client.query(&query, &[]).await?;
-        }
-
-        let mem = dataGenerator.mem_info();
-        let query = format!(
-            "insert into ram values ('{}', '{}', {}, {}, {});"
-            , timestamp, String::from("dells"), mem.mem_total, mem.mem_available, (mem.mem_total - mem.mem_available) as f64 * 100.0 / mem.mem_total as f64,
-        );
-        client.query(&query, &[]).await?;
-
-        let cache = dataGenerator.cache_info();
-        let query = format!(
-            "insert into cache values ('{}', '{}', {}, {});"
-            , timestamp, String::from("dells"), cache.swap_total, cache.free_total,
-        );
-        client.query(&query, &[]).await?;
-        
-        let mut rng = rand::thread_rng();
-
-        for i in 0..models.len() {
-            let ratio = rng.gen_range(0.9..=1.1);
-            let query = format!(
-                "insert into models values ('{}', '{}', {})",
-                timestamp,
-                models[i],
-                ratio
-            );
-            client.query(&query, &[]).await?;
-        }
-
-
-        let sleep_duration = next_timestamp.signed_duration_since(Utc::now());
-        sleep(sleep_duration.to_std().unwrap());
-    }
-    Ok(())
+#[test]
+fn show_aes() {
+    let mut key: [u8; 32] = [0; 32];
+    std::io::Read::read(&mut "key".as_bytes(), &mut key);
+    let key = GenericArray::from();
+    let cipher = Aes128::new(key)
 }
