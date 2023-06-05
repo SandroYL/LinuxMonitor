@@ -1,6 +1,13 @@
+pub mod encrypt;
+
+use std::collections::{VecDeque, HashSet};
+
 use LinuxMonitor::pgconn::run_collector;
-use aes::{Aes128, cipher::{KeyInit, generic_array::GenericArray}};
+use aes::{Aes128, cipher::{generic_array::GenericArray, BlockDecrypt}, Aes256};
+use block_modes::{Cbc, block_padding::Pkcs7, BlockMode};
 use tokio_postgres::Error;
+
+use crate::encrypt::u8_base64;
 
 
 #[tokio::main]
@@ -9,6 +16,39 @@ async fn main() -> Result<(), Error> {
     // benchmarks_insert();
     // benchmarks_select();
     Ok(())
+}
+
+#[test]
+fn show_aes() {
+    use std::io::Read;
+    type Aes128Cbc = Cbc<Aes128, Pkcs7>;
+    let mut key: [u8; 16] = [0; 16];
+    let mut iv: [u8; 16] = [0; 16];
+    let number = format!("{:0>32b}", 0.9739077_f32.to_bits()) ;
+    // let number = "00000000000000000000000000000000".to_string();
+    let mut number = number.as_bytes();
+    let mut plaintext1: [u8; 16] = [0; 16];
+    let mut plaintext2: [u8; 16] = [0; 16];
+    let mut plaintext3 = [16; 16];
+    let mut number1 = &number[..16];
+    let mut number2 = &number[16..32];
+    Read::read(&mut number1, &mut plaintext1).unwrap();
+    Read::read(&mut number2, &mut plaintext2).unwrap();
+    Read::read(&mut "key".as_bytes(), &mut key).unwrap();
+    Read::read(&mut "key".as_bytes(), &mut iv).unwrap();
+    let mut plaintext1 = GenericArray::from(plaintext1);
+    let mut plaintext2 = GenericArray::from(plaintext2);
+    let mut plaintext3 = GenericArray::from(plaintext3);
+    let mut cipher = Aes128Cbc::new_from_slices(&key, &iv).unwrap();
+    let mut end = [plaintext1, plaintext2, plaintext3];
+    println!("{:?}", end);
+    cipher.encrypt_blocks(&mut end);
+    println!("{:?}", end);
+    let mut chs: Vec<u8> = Vec::new();
+    for unum in [end[0],end[1], end[2]].concat() {
+        chs.push(unum.into());
+    }
+    println!("{}", u8_base64(&chs).chars().take(64).collect::<String>());
 }
 
 
@@ -175,10 +215,11 @@ async fn main() -> Result<(), Error> {
 //     client.batch_execute("copy (select * from cpu_time) TO '/usr/lib/postgresql/15/backup/test.csv' WITH (FORMAT CSV);").await.unwrap();
 // }
 
+
+
+
+
 #[test]
-fn show_aes() {
-    let mut key: [u8; 32] = [0; 32];
-    std::io::Read::read(&mut "key".as_bytes(), &mut key);
-    let key = GenericArray::from();
-    let cipher = Aes128::new(key)
+fn show() {
+    println!("{}", "nejKXaTPqZQxoP6uPwVpDhi/3kctbAptAbz1MYGeod8Z4Rnr+7C+jbnIXE0mBO1m".len());
 }
